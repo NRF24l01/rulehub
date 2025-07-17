@@ -87,16 +87,13 @@ paths:
                 - password
       responses:
         '200':
-          description: Успешный вход
+          description: Успешный вход. refresh_token устанавливается в httpOnly cookie.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   access_token:
-                    type: string
-                    minLength: 16
-                  refresh_token:
                     type: string
                     minLength: 16
         '401':
@@ -107,18 +104,8 @@ paths:
       tags:
         - Auth
       summary: Обновление токена доступа
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                refresh_token:
-                  type: string
-                  minLength: 16
-              required:
-                - refresh_token
+      description: |
+        refresh_token должен быть передан в httpOnly cookie.
       responses:
         '200':
           description: Новый access_token

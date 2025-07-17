@@ -142,9 +142,16 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 10000
+                media:
+                  type: array
+                  description: Список URL медиафайлов, связанных со статьей
+                  items:
+                    type: string
+                    format: uri
               required:
                 - title
                 - content
+                - media
       responses:
         '201':
           description: Статья создана
@@ -205,6 +212,12 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 10000
+                media:
+                  type: array
+                  description: Список URL медиафайлов, связанных со статьей
+                  items:
+                    type: string
+                    format: uri
       responses:
         '200':
           description: Статья обновлена

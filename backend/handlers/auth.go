@@ -52,3 +52,31 @@ func (h* Handler) UserLoginHandler(c echo.Context) error {
 		AccessJWT: accessToken,
 	})
 }
+
+func (h* Handler) UserRegistrationHandler(c echo.Context) error {
+	user_data := c.Get("validatedBody").(*schemas.SignUpRequest)
+	log.Printf("Registering user: %+v", user_data)
+
+	// Check if the username already exists
+	var existingUser models.User
+	if err := h.DB.Where("username = ?", user_data.Username).First(&existingUser).Error; err == nil {
+		log.Printf("Username already exists: %s", user_data.Username)
+		return c.JSON(http.StatusConflict, echo.Map{"message": "Username already exists"})
+	}
+
+	// Create a new user
+	newUser := models.User{
+		Username: user_data.Username,
+		Password: utils.HashPassword(user_data.Password),
+	}
+
+	if err := h.DB.Create(&newUser).Error; err != nil {
+		log.Printf("Error creating user: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+	}
+
+	return c.JSON(http.StatusCreated,  schemas.SignUpResponse{
+		ID:       newUser.ID.String(),
+		Username: newUser.Username,
+	})
+}

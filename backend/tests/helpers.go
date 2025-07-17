@@ -16,7 +16,7 @@ func getAPIBase() string {
     if v := os.Getenv("API_BASE_URL"); v != "" {
         return v
     }
-    return "http://localhost:8080/api"
+    panic("API_BASE_URL environment variable not set")
 }
 
 func ResetDB(t *testing.T) {
@@ -61,13 +61,24 @@ func LoginUser(t *testing.T, username, password string) (string, string) {
         t.Fatalf("Login failed, status: %d", resp.StatusCode)
     }
     var out struct {
-        AccessToken  string `json:"access_token"`
-        RefreshToken string `json:"refresh_token"`
+        AccessToken string `json:"access_token"`
     }
     json.NewDecoder(resp.Body).Decode(&out)
-    return out.AccessToken, out.RefreshToken
+
+    // Extract refresh token from Set-Cookie header
+    var refreshToken string
+    for _, cookie := range resp.Cookies() {
+        if cookie.Name == "refresh_token" {
+            refreshToken = cookie.Value
+            break
+        }
+    }
+    if refreshToken == "" {
+        t.Fatalf("Refresh token not found in cookies")
+    }
+    return out.AccessToken, refreshToken
 }
 
 func UniqueUser() (string, string) {
-    return fmt.Sprintf("user_%d", time.Now().UnixNano()), "password123"
+    return fmt.Sprintf("user_%d", time.Now().Unix()), "password123"
 }

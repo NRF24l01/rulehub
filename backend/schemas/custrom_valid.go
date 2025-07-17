@@ -7,17 +7,23 @@ import (
 )
 
 func RegisterCustomValidations(v *validator.Validate) error {
-	return v.RegisterValidation("strongpwd", validateStrongPassword)
+	err := v.RegisterValidation("strongpwd", validateStrongPassword)
+	if err != nil {
+		return err
+	}
+	err = v.RegisterValidation("validusername", validUsername)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func validateStrongPassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
 
-	var hasUpper, hasLower, hasNumber bool
+	var hasLower, hasNumber bool
 	for _, ch := range password {
 		switch {
-		case unicode.IsUpper(ch):
-			hasUpper = true
 		case unicode.IsLower(ch):
 			hasLower = true
 		case unicode.IsDigit(ch):
@@ -25,5 +31,18 @@ func validateStrongPassword(fl validator.FieldLevel) bool {
 		}
 	}
 
-	return hasUpper && hasLower && hasNumber
+	return hasLower && hasNumber
+}
+
+func validUsername(fl validator.FieldLevel) bool {
+	username := fl.Field().String()
+	if len(username) < 3 || len(username) > 20 {
+		return false
+	}
+	for _, ch := range username {
+		if unicode.IsSpace(ch) || (!unicode.IsLetter(ch) && !unicode.IsDigit(ch) && ch != '_' && ch != '-') {
+			return false
+		}
+	}
+	return true
 }

@@ -11,6 +11,7 @@ func TestRegisterValidation(t *testing.T) {
     ResetDB(t)
     // Успешная регистрация
     username, password := UniqueUser()
+    t.Logf("Registering user: username=%s, password=%s", username, password)
     RegisterUser(t, username, password)
 
     // Короткий username
@@ -41,8 +42,8 @@ func TestRegisterValidation(t *testing.T) {
     body = map[string]string{"username": username, "password": password}
     b, _ = json.Marshal(body)
     resp, _ = http.Post(apiBase+"/auth/register", "application/json", bytes.NewReader(b))
-    if resp.StatusCode != 400 {
-        t.Errorf("Duplicate user: expected 400, got %d", resp.StatusCode)
+    if resp.StatusCode != 409 {
+        t.Errorf("Duplicate user: expected 409, got %d", resp.StatusCode)
     }
 }
 
@@ -58,13 +59,14 @@ func TestLoginValidation(t *testing.T) {
     }
 
     // Неверный пароль
-    _, _ = LoginUserExpectStatus(t, username, "wrongpass", 401)
+    _, _ = LoginUserExpectStatus(t, username, "wrongpass123", 401)
 
     // Неверный пользователь
     _, _ = LoginUserExpectStatus(t, "nouser", "password123", 401)
 }
 
 func LoginUserExpectStatus(t *testing.T, username, password string, wantStatus int) (string, string) {
+    t.Logf("Logging in user: username=%s, password=%s", username, password)
     body := map[string]string{"username": username, "password": password}
     b, _ := json.Marshal(body)
     resp, err := http.Post(apiBase+"/auth/login", "application/json", bytes.NewReader(b))

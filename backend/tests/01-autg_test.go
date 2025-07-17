@@ -86,10 +86,19 @@ func TestRefreshToken(t *testing.T) {
     RegisterUser(t, username, password)
     _, refresh := LoginUser(t, username, password)
 
-    // Валидный refresh
-    body := map[string]string{"refresh_token": refresh}
-    b, _ := json.Marshal(body)
-    resp, err := http.Post(apiBase+"/auth/refresh", "application/json", bytes.NewReader(b))
+    // Валидный refresh через cookie
+    req, err := http.NewRequest("POST", apiBase+"/auth/refresh", nil)
+    if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+    req.AddCookie(&http.Cookie{
+        Name:  "refresh_token",
+        Value: refresh,
+        Path:  "/",
+        HttpOnly: true,
+    })
+    client := &http.Client{}
+    resp, err := client.Do(req)
     if err != nil {
         t.Fatalf("Refresh failed: %v", err)
     }
@@ -105,10 +114,22 @@ func TestRefreshToken(t *testing.T) {
         t.Errorf("Refresh: access_token too short")
     }
 
-    // Невалидный refresh
-    body = map[string]string{"refresh_token": "badtoken"}
-    b, _ = json.Marshal(body)
-    resp, _ = http.Post(apiBase+"/auth/refresh", "application/json", bytes.NewReader(b))
+    // Невалидный refresh через cookie
+    req, err = http.NewRequest("POST", apiBase+"/auth/refresh", nil)
+    if err != nil {
+        t.Fatalf("Failed to create request: %v", err)
+    }
+    req.AddCookie(&http.Cookie{
+        Name:  "refresh_token",
+        Value: "badtoken",
+        Path:  "/",
+        HttpOnly: true,
+    })
+    resp, err = client.Do(req)
+    if err != nil {
+        t.Fatalf("Refresh failed: %v", err)
+    }
+    defer resp.Body.Close()
     if resp.StatusCode != 401 {
         t.Errorf("Refresh: expected 401, got %d", resp.StatusCode)
     }

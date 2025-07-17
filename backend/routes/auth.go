@@ -18,4 +18,6 @@ func RegisterAuthRoutes(e *echo.Echo, h* handlers.Handler) {
 	group.POST("/register", h.UserRegistrationHandler, middleware.ValidationMiddleware(func() interface{} {
 		return &schemas.SignUpRequest{}
 	}))
+
+	group.POST("/refresh", h.UserJwtRefreshHandler)
 }

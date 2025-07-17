@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"log"
+	"os"
 
 	"rulehub/models"
 	"rulehub/schemas"
@@ -78,5 +79,42 @@ func (h* Handler) UserRegistrationHandler(c echo.Context) error {
 	return c.JSON(http.StatusCreated,  schemas.SignUpResponse{
 		ID:       newUser.ID.String(),
 		Username: newUser.Username,
+	})
+}
+
+func (h* Handler) UserJwtRefreshHandler(c echo.Context) error {
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		log.Printf("No refresh token found: %v", err)
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Refresh token not found"})
+	}
+
+	jwtClaims, err := utils.ValidateToken(refreshToken.Value, []byte(os.Getenv("PASSWORD_JWT_REFRESH_SECRET")))
+	if err != nil {
+		log.Printf("Invalid refresh token: %v", err)
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid refresh token"})
+	}
+
+	userID, ok := jwtClaims["user_id"].(string)
+	if !ok {
+		log.Println("Invalid user ID in token claims")
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid token claims"})
+	}
+
+	// Check if the user exists in the database
+	var user models.User
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		log.Printf("User not found: %v", err)
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "User not found"})
+	}
+	// Generate a new access token
+	accessToken, err := utils.GenerateAccessToken(user.ID.String(), user.Username)
+	if err != nil {
+		log.Printf("Error generating access token: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+	}
+	
+	return c.JSON(http.StatusOK, schemas.SignInResponse{
+		AccessJWT: accessToken,
 	})
 }

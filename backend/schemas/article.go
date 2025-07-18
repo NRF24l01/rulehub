@@ -15,6 +15,6 @@ type ArticleCreateResponse struct {
 	ID             string              `json:"id"`
 	Title          string              `json:"title"`
 	Content        string              `json:"content"`
-	Media          []MediaCreateResponse `json:"media"`
+	MediaPresignedUrl          []MediaCreateResponse `json:"media"`
 	AuthorUsername string              `json:"author_username"`
 }

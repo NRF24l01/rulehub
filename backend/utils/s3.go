@@ -8,6 +8,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/google/uuid"
 )
 
 func CreateMinioClient() (*minio.Client, error) {
@@ -28,10 +29,24 @@ func CreateMinioClient() (*minio.Client, error) {
 	return client, nil
 }
 
-func GeneratePresignedURL(client *minio.Client, bucketName, objectName string, expires time.Duration) (string, error) {
-	presignedURL, err := client.PresignedGetObject(context.Background(), bucketName, objectName, expires, nil)
-	if err != nil {
-		return "", fmt.Errorf("error generating presigned URL: %w", err)
+func FullGeneratePresignedURL(client *minio.Client, bucketName string, expires time.Duration) (string, string, error) {
+	var uniqueID string
+	for {
+		uuidObj := uuid.New()
+		uniqueID = uuidObj.String()
+		_, err := client.StatObject(context.Background(), bucketName, uniqueID, minio.StatObjectOptions{})
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" || minio.ToErrorResponse(err).Code == "NotFound" {
+			break
+		}
+		if err != nil && minio.ToErrorResponse(err).Code != "NoSuchKey" && minio.ToErrorResponse(err).Code != "NotFound" {
+			return "", "", fmt.Errorf("error checking object existence: %w", err)
+		}
 	}
-	return presignedURL.String(), nil
+
+	// Generate presigned URL for the unique UUID object
+	presignedURL, err := client.PresignedGetObject(context.Background(), bucketName, uniqueID, expires, nil)
+	if err != nil {
+		return "", "", fmt.Errorf("error generating presigned URL: %w", err)
+	}
+	return uniqueID, presignedURL.String(), nil
 }

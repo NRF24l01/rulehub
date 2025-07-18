@@ -22,21 +22,38 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 	}
 
 	// Create media entries if any
+	var mediaResponses []schemas.MediaCreateResponse
 	for _, mediaFileName := range article_data.Media {
+		name, URL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
+		if err != nil {
+			log.Printf("Error generating presigned URL: %v", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+		}
+
 		media := models.Media{
 			FileName: mediaFileName,
-			S3Key:    utils.GenerateS3Key(mediaFileName),
+			S3Key:    name,
 			ArticleID: article.ID.String(),
 			Article:   article,
 		}
+		article.Media = append(article.Media, media)
+		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
+			FileName: mediaFileName,
+			S3Key:    name,
+		})
+	}
 
 	if err := h.DB.Create(&article).Error; err != nil {
 		log.Printf("Error creating article: %v", err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 	}
 
-	return c.JSON(http.StatusCreated, schemas.ArticleCreateResponse{
-		ID:    article.ID.String(),
-		Title: article.Title,
-	})
+	resp := schemas.ArticleCreateResponse{
+		ID:             article.ID.String(),
+		Title:          article.Title,
+		Content:        article.Content,
+		MediaPresignedUrl: mediaResponses,
+		AuthorUsername: c.Get("username").(string),
+	}
+	return c.JSON(http.StatusOK, resp)
 }

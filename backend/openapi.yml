@@ -269,8 +269,15 @@ components:
           minLength: 3
           maxLength: 32
           pattern: '^[a-zA-Z0-9_]+$'
+        media:
+          type: array
+          description: Список URL медиафайлов, связанных со статьей
+          items:
+            type: string
+            format: uri
       required:
         - id
         - title
         - content
         - author
+        - media

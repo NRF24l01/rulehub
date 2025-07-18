@@ -6,6 +6,7 @@ import (
 	"rulehub/models"
 	"rulehub/routes"
 	"rulehub/schemas"
+	"rulehub/utils"
 
 	"github.com/go-playground/validator"
 
@@ -26,6 +27,11 @@ func main() {
 	}
 
 	db := models.RegisterPostgres()
+	minio, err := utils.CreateMinioClient()
+	if err != nil {
+		log.Fatalf("failed to create MinIO client: %v", err)
+		
+	}
 
 	validater := validator.New()
 	schemas.RegisterCustomValidations(validater)
@@ -41,7 +47,7 @@ func main() {
 		return c.JSON(200, schemas.Message{Status: "RuleHUB backend is ok"})
 	})
 
-	handler := &handlers.Handler{DB: db}
+	handler := &handlers.Handler{DB: db, MinIOClient: minio}
 	routes.RegisterRoutes(e, handler)
 	
 	e.Logger.Fatal(e.Start(":1324"))

@@ -19,7 +19,7 @@ func RegisterPostgres() (*gorm.DB){
 
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`)
 
-	db.AutoMigrate(&User{})
+	db.AutoMigrate(&User{}, &Article{}, &Media{})
 
 	return db
 }

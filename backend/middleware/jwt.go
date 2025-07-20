@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"quoter_back/utils"
+	"rulehub/utils"
 
 	"github.com/labstack/echo/v4"
 )

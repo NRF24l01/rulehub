@@ -43,7 +43,7 @@ func JWTMiddleware() echo.MiddlewareFunc {
             }
 
             // Передаем user_id в контекст
-            c.Set("user_id", userID)
+            c.Set("userID", userID)
 
             // Переходим к следующему обработчику
             return next(c)

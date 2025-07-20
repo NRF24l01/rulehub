@@ -16,6 +16,12 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 	article_data := c.Get("validatedBody").(*schemas.ArticleCreateRequest)
 	log.Printf("Creating article: %+v", article_data)
 
+	var user models.User
+	if err := h.DB.Where("id = ?", c.Get("userID").(string)).First(&user).Error; err != nil {
+		log.Printf("User not found: %v", err)
+		return c.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid username or password"})
+	}
+
 	// Create a new article in the database
 	article := models.Article{
 		Title:   article_data.Title,
@@ -58,7 +64,7 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 		Title:          article.Title,
 		Content:        article.Content,
 		MediaPresignedUrl: mediaResponses,
-		AuthorUsername: c.Get("username").(string),
+		AuthorUsername: user.Username,
 	}
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusCreated, resp)
 }

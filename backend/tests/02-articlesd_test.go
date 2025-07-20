@@ -10,7 +10,7 @@ import (
 
 // Add a named struct type for articles
 type Article struct {
-	ID      int    `json:"id"`
+	UUID    string `json:"uuid"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 	Author  string `json:"author"`
@@ -25,7 +25,7 @@ func TestArticleCRUD(t *testing.T) {
     // Создание статьи (валидно)
     title := "Test Article"
     content := "This is the content"
-    articleID := CreateArticle(t, access, title, content, 201)
+    articleUUID := CreateArticle(t, access, title, content, 201)
 
     // Создание статьи (короткий title)
     CreateArticle(t, access, "ab", content, 400)
@@ -34,32 +34,32 @@ func TestArticleCRUD(t *testing.T) {
     CreateArticle(t, access, "Valid Title", "", 400)
 
     // Получение статьи
-    got := GetArticle(t, articleID, 200)
+    got := GetArticle(t, articleUUID, 200)
     if got.Title != title || got.Content != content || got.Author != username {
         t.Errorf("GetArticle: wrong data")
     }
 
     // Получение несуществующей статьи
-    GetArticle(t, 999999, 404)
+    GetArticle(t, "00000000-0000-0000-0000-000000000000", 404)
 
     // Изменение статьи (валидно)
     newContent := "Updated content"
-    UpdateArticle(t, access, articleID, title, newContent, 200)
+    UpdateArticle(t, access, articleUUID, title, newContent, 200)
 
     // Проверка изменения
-    got = GetArticle(t, articleID, 200)
+    got = GetArticle(t, articleUUID, 200)
     if got.Content != newContent {
         t.Errorf("UpdateArticle: content not updated")
     }
 
     // Изменение статьи (короткий title)
-    UpdateArticle(t, access, articleID, "ab", newContent, 400)
+    UpdateArticle(t, access, articleUUID, "ab", newContent, 400)
 
     // Изменение статьи (пустой контент)
-    UpdateArticle(t, access, articleID, title, "", 400)
+    UpdateArticle(t, access, articleUUID, title, "", 400)
 }
 
-func CreateArticle(t *testing.T, access, title, content string, wantStatus int) int {
+func CreateArticle(t *testing.T, access, title, content string, wantStatus int) string {
     body := map[string]string{"title": title, "content": content}
     b, _ := json.Marshal(body)
     req, _ := http.NewRequest("POST", apiBase+"/articles/", bytes.NewReader(b))
@@ -76,13 +76,13 @@ func CreateArticle(t *testing.T, access, title, content string, wantStatus int) 
     if wantStatus == 201 {
         var out Article
         json.NewDecoder(resp.Body).Decode(&out)
-        return out.ID
+        return out.UUID
     }
-    return 0
+    return ""
 }
 
-func GetArticle(t *testing.T, id int, wantStatus int) Article {
-    resp, err := http.Get(fmt.Sprintf("%s/articles/%d", apiBase, id))
+func GetArticle(t *testing.T, uuid string, wantStatus int) Article {
+    resp, err := http.Get(fmt.Sprintf("%s/articles/%s", apiBase, uuid))
     if err != nil {
         t.Fatalf("GetArticle failed: %v", err)
     }
@@ -97,10 +97,10 @@ func GetArticle(t *testing.T, id int, wantStatus int) Article {
     return out
 }
 
-func UpdateArticle(t *testing.T, access string, id int, title, content string, wantStatus int) {
+func UpdateArticle(t *testing.T, access string, uuid string, title, content string, wantStatus int) {
     body := map[string]string{"title": title, "content": content}
     b, _ := json.Marshal(body)
-    req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/articles/%d", apiBase, id), bytes.NewReader(b))
+    req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/articles/%s", apiBase, uuid), bytes.NewReader(b))
     req.Header.Set("Authorization", "Bearer "+access)
     req.Header.Set("Content-Type", "application/json")
     resp, err := http.DefaultClient.Do(req)

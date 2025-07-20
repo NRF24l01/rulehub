@@ -14,4 +14,6 @@ func RegisterArticleRoutes(e *echo.Echo, h* handlers.Handler) {
 	group.POST("/", h.ArticleCreateHandler, middleware.ValidationMiddleware(func() interface{} {
 		return &schemas.ArticleCreateRequest{}
 	}), middleware.JWTMiddleware())
+
+	group.GET("/:uuid", h.ArticleGetHandler)
 }

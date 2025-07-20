@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+
+	googleUUID "github.com/google/uuid"
 )
 
 func (h* Handler) ArticleCreateHandler(c echo.Context) error {
@@ -59,7 +61,7 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 	}
 
-	resp := schemas.ArticleCreateResponse{
+	resp := schemas.ArticleResponse{
 		ID:             article.ID.String(),
 		Title:          article.Title,
 		Content:        article.Content,
@@ -67,4 +69,44 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 		AuthorUsername: user.Username,
 	}
 	return c.JSON(http.StatusCreated, resp)
+}
+
+func (h* Handler) ArticleGetHandler(c echo.Context) error {
+	uuid := c.Param("uuid")
+
+	if err := googleUUID.Validate(uuid); err != nil {
+		log.Printf("Error getting article, bad uuid: %v", uuid)
+		return c.JSON(http.StatusBadRequest, echo.Map{"message": "UUID is required"})
+	}
+
+	var article models.Article
+	// Preload User and Media relations
+	if err := h.DB.Preload("User").Preload("Media").Where("id = ?", uuid).First(&article).Error; err != nil {
+		log.Printf("Error getting article with id: %v, 404", uuid)
+		return c.JSON(http.StatusNotFound, echo.Map{"message": "No such article"})
+	}
+
+	// Prepare media responses with presigned URLs
+	var mediaResponses []schemas.MediaCreateResponse
+	for _, media := range article.Media {
+		// Generate presigned URL for each media file
+		_, presignedURL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
+		if err != nil {
+			log.Printf("Error generating presigned URL for media: %v", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+		}
+		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
+			FileName: media.FileName,
+			S3Key:    presignedURL,
+		})
+	}
+
+	resp := schemas.ArticleResponse{
+		ID: article.ID.String(),
+		Title:          article.Title,
+		Content:        article.Content,
+		MediaPresignedUrl: mediaResponses,
+		AuthorUsername: article.User.Username,
+	}
+	return c.JSON(http.StatusOK, resp)
 }

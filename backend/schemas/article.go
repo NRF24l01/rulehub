@@ -11,7 +11,7 @@ type MediaCreateResponse struct {
 	S3Key    string `json:"s3_key"`
 }
 
-type ArticleCreateResponse struct {
+type ArticleResponse struct {
 	ID             string              `json:"id"`
 	Title          string              `json:"title"`
 	Content        string              `json:"content"`

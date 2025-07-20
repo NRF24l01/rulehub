@@ -8,6 +8,14 @@ import (
 	"testing"
 )
 
+// Add a named struct type for articles
+type Article struct {
+	ID      int    `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Author  string `json:"author"`
+}
+
 func TestArticleCRUD(t *testing.T) {
     ResetDB(t)
     username, password := UniqueUser()
@@ -54,7 +62,7 @@ func TestArticleCRUD(t *testing.T) {
 func CreateArticle(t *testing.T, access, title, content string, wantStatus int) int {
     body := map[string]string{"title": title, "content": content}
     b, _ := json.Marshal(body)
-    req, _ := http.NewRequest("POST", apiBase+"/articles", bytes.NewReader(b))
+    req, _ := http.NewRequest("POST", apiBase+"/articles/", bytes.NewReader(b))
     req.Header.Set("Authorization", "Bearer "+access)
     req.Header.Set("Content-Type", "application/json")
     resp, err := http.DefaultClient.Do(req)
@@ -66,24 +74,14 @@ func CreateArticle(t *testing.T, access, title, content string, wantStatus int) 
         t.Fatalf("CreateArticle: expected %d, got %d", wantStatus, resp.StatusCode)
     }
     if wantStatus == 201 {
-        var out struct {
-            ID      int    `json:"id"`
-            Title   string `json:"title"`
-            Content string `json:"content"`
-            Author  string `json:"author"`
-        }
+        var out Article
         json.NewDecoder(resp.Body).Decode(&out)
         return out.ID
     }
     return 0
 }
 
-func GetArticle(t *testing.T, id int, wantStatus int) struct {
-    ID      int
-    Title   string
-    Content string
-    Author  string
-} {
+func GetArticle(t *testing.T, id int, wantStatus int) Article {
     resp, err := http.Get(fmt.Sprintf("%s/articles/%d", apiBase, id))
     if err != nil {
         t.Fatalf("GetArticle failed: %v", err)
@@ -92,12 +90,7 @@ func GetArticle(t *testing.T, id int, wantStatus int) struct {
     if resp.StatusCode != wantStatus {
         t.Fatalf("GetArticle: expected %d, got %d", wantStatus, resp.StatusCode)
     }
-    var out struct {
-        ID      int    `json:"id"`
-        Title   string `json:"title"`
-        Content string `json:"content"`
-        Author  string `json:"author"`
-    }
+    var out Article
     if wantStatus == 200 {
         json.NewDecoder(resp.Body).Decode(&out)
     }

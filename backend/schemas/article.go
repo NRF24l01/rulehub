@@ -16,5 +16,11 @@ type ArticleResponse struct {
 	Title          string              `json:"title"`
 	Content        string              `json:"content"`
 	MediaPresignedUrl          []MediaCreateResponse `json:"media"`
-	AuthorUsername string              `json:"author_username"`
+	AuthorUsername string              `json:"author"`
+}
+
+type ArticleUpdateRequest struct {
+	Title   *string   `json:"title" validate:"omitempty,min=3,max=128"`
+	Content *string   `json:"content" validate:"omitempty,min=1,max=10000"`
+	Media   *[]string `json:"media" validate:"omitempty,dive,min=1,max=128"`
 }

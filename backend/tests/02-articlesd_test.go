@@ -10,7 +10,7 @@ import (
 
 // Add a named struct type for articles
 type Article struct {
-	UUID    string `json:"uuid"`
+	UUID    string `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 	Author  string `json:"author"`
@@ -78,7 +78,7 @@ func CreateArticle(t *testing.T, access, title, content string, wantStatus int) 
         json.NewDecoder(resp.Body).Decode(&out)
         return out.UUID
     }
-    return ""
+    return "not 201"
 }
 
 func GetArticle(t *testing.T, uuid string, wantStatus int) Article {

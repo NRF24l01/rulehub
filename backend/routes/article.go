@@ -9,7 +9,7 @@ import (
 )
 
 func RegisterArticleRoutes(e *echo.Echo, h* handlers.Handler) {
-	group := e.Group("/article")
+	group := e.Group("/articles")
 
 	group.POST("/", h.ArticleCreateHandler, middleware.ValidationMiddleware(func() interface{} {
 		return &schemas.ArticleCreateRequest{}

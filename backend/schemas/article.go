@@ -3,7 +3,7 @@ package schemas
 type ArticleCreateRequest struct {
 	Title       string `json:"title" validate:"required,min=3,max=128"`
 	Content     string `json:"content" validate:"required,min=1,max=10000"`
-	Media       []string `json:"media" validate:"omitempty,dive,required,min=1,max=128"` // Filenames list
+	Media       []string `json:"media" validate:"omitempty,dive,min=1,max=128"` // Filenames list
 }
 
 type MediaCreateResponse struct {

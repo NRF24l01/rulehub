@@ -11,6 +11,7 @@ import (
 
 func RegisterRoutes(e *echo.Echo, h *handlers.Handler) {
 	RegisterAuthRoutes(e, h)
+	RegisterArticleRoutes(e, h)
 
 	if os.Getenv("RUNTIME_PRODUCTION") != "true" {
 		log.Println("Registering debug endpoints (development mode)")

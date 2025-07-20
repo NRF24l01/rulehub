@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"net/http"
 	"log"
+	"net/http"
 	"os"
 	"rulehub/models"
 	"rulehub/schemas"
 	"rulehub/utils"
+	"time"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -36,11 +38,14 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 			ArticleID: article.ID.String(),
 			Article:   article,
 		}
-		article.Media = append(article.Media, media)
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 			FileName: mediaFileName,
-			S3Key:    name,
+			S3Key:    URL,
 		})
+		if err := h.DB.Create(&media).Error; err != nil {
+			log.Printf("Error creating media: %v", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+		}
 	}
 
 	if err := h.DB.Create(&article).Error; err != nil {

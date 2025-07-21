@@ -122,7 +122,7 @@ jobs:
       - name: Ожидание готовности сервисов
         run: |
           for i in {1..30}; do
-            unhealthy=$(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f backend/test.docker-compose.yml ps -q) | grep -v healthy || true)
+            unhealthy=$(docker inspect --format='{{.State.Health.Status}}' $(c|| true)
             if [ -z "$unhealthy" ]; then
               echo "All services are healthy"
               break
@@ -142,6 +142,7 @@ jobs:
       - name: Запуск тестового контейнера
         run: |
           docker run --rm \
+            --network host \
             -e API_BASE_URL="http://127.0.0.1:8004" \
             ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
 

@@ -1,0 +1,60 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    
+jobs:
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторий
+        uses: actions/checkout@v4
+
+      - name: Логин в GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Приведение имени репозитория к нижнему регистру
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Установка хеша коммита как тега
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Собираем Docker-образ
+        run: |
+          docker build \
+            -t ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:${{ env.IMAGE_TAG }} backend/
+
+      - name: Пушим образ в GHCR
+        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:${{ env.IMAGE_TAG }}
+  
+  build-tests:
+    name: Build Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторий
+        uses: actions/checkout@v4
+
+      - name: Логин в GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Приведение имени репозитория к нижнему регистру
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Установка хеша коммита как тега
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Собираем Docker-образ
+        run: |
+          docker build \
+            -f backend/Dockerfile.tests \
+            -t ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }} backend/
+
+      - name: Пушим образ в GHCR
+        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}

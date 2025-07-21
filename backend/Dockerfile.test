@@ -1,0 +1,10 @@
+FROM golang:1.24 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN GOPROXY="https://goproxy.cn" go mod download
+
+COPY . .
+
+CMD ["go", "test", "-v", "rulehub/tests"]

@@ -166,3 +166,16 @@ jobs:
           docker tag ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }} ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:stable
           docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:stable
           docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:stable
+      
+      - name: Сохранение логов docker-compose в артефакты
+        if: always()
+        run: |
+          mkdir -p artifacts/logs
+          docker-compose -f backend/test.docker-compose.yml logs --no-color > artifacts/logs/docker-compose.log
+
+      - name: Загрузка логов как artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-compose-logs
+          path: artifacts/logs/docker-compose.log

@@ -155,10 +155,15 @@ jobs:
             -e API_BASE_URL=http://rulehub-backend:1324 \
             ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
 
-
       - name: Остановка тестового окружения
         if: always()
         run: docker-compose -f backend/test.docker-compose.yml down
+
+      - name: Pull backend image for tagging
+        run: docker pull ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:${{ env.IMAGE_TAG }}
+
+      - name: Pull backend-tests image for tagging
+        run: docker pull ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
 
       - name: Тегирование образов на stable (если тесты прошли)
         run: |
@@ -166,16 +171,5 @@ jobs:
           docker tag ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }} ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:stable
           docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:stable
           docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:stable
-      
-      - name: Сохранение логов docker-compose в артефакты
-        if: always()
-        run: |
-          mkdir -p artifacts/logs
-          docker-compose -f backend/test.docker-compose.yml logs --no-color > artifacts/logs/docker-compose.log
 
-      - name: Загрузка логов как artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-compose-logs
-          path: artifacts/logs/docker-compose.log
+

@@ -10,7 +10,7 @@ on:
     paths:
       - 'backend/**'
   workflow_dispatch:
-    
+
 jobs:
   build-backend:
     name: Build Backend
@@ -19,15 +19,7 @@ jobs:
     steps:
       - name: Checkout репозиторий
         uses: actions/checkout@v4
-      
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-            
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -37,14 +29,15 @@ jobs:
       - name: Приведение имени репозитория к нижнему регистру
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Собираем Docker-образ
-        run: |
-          docker build \
-            -t ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:latest backend/
+      - name: Собираем Docker-образ с кешем
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          tags: ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:latest
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Пушим образ в GHCR
-        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:latest
-  
   build-tests:
     name: Build Backend Tests
     runs-on: ubuntu-latest
@@ -52,17 +45,7 @@ jobs:
     steps:
       - name: Checkout репозиторий
         uses: actions/checkout@v4
-      
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -72,11 +55,12 @@ jobs:
       - name: Приведение имени репозитория к нижнему регистру
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Собираем Docker-образ
-        run: |
-          docker build \
-            -f backend/Dockerfile.test \
-            -t ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:latest backend/
-
-      - name: Пушим образ в GHCR
-        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:latest
+      - name: Собираем Docker-образ с кешем
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile.test
+          tags: ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:latest
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

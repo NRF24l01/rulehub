@@ -3,8 +3,12 @@ name: Backend CI/CD
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
   pull_request:
     branches: [main]
+    paths:
+      - 'backend/**'
   workflow_dispatch:
     
 jobs:
@@ -53,7 +57,7 @@ jobs:
       - name: Собираем Docker-образ
         run: |
           docker build \
-            -f backend/Dockerfile.tests \
+            -f backend/Dockerfile.test \
             -t ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }} backend/
 
       - name: Пушим образ в GHCR

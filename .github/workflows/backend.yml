@@ -142,8 +142,8 @@ jobs:
       - name: Запуск тестового контейнера
         run: |
           docker run --rm \
-            --network host \
-            -e API_BASE_URL="http://127.0.0.1:8004" \
+            --network rulehub-net \
+            -e API_BASE_URL=http://rulehub-backend:1324 \
             ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
 
       - name: Остановка тестового окружения

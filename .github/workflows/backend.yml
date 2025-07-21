@@ -114,7 +114,6 @@ jobs:
           PASSWORD_JWT_ACCESS_SECRET=jwt_test_secret_access
           EOF
 
-
       - name: Запуск сервисов тестового окружения
         run: |
           docker-compose -f backend/test.docker-compose.yml up -d
@@ -138,13 +137,21 @@ jobs:
             docker-compose -f backend/test.docker-compose.yml logs
             exit 1
           fi
+      
+      - name: Получение имени docker-compose сети
+        id: network
+        run: |
+          NET=$(docker network ls --format '{{.Name}}' | grep 'rulehub-net$' || true)
+          echo "DOCKER_COMPOSE_NETWORK=$NET" >> $GITHUB_ENV
 
-      - name: Запуск тестового контейнера
+
+      - name: Запуск тестов через docker run
         run: |
           docker run --rm \
-            --network rulehub-net \
+            --network $DOCKER_COMPOSE_NETWORK \
             -e API_BASE_URL=http://rulehub-backend:1324 \
             ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
+
 
       - name: Остановка тестового окружения
         if: always()

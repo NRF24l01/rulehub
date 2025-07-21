@@ -7,7 +7,7 @@ RUN GOPROXY="https://goproxy.cn" go mod download
 
 COPY . .
 
-RUN GOOS=linux GOARCH=amd64 go build -o /app/main .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/main .
 
 FROM alpine:latest
 

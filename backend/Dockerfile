@@ -13,7 +13,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata curl
 
 COPY --from=builder /app/main .
 RUN chmod +x ./main

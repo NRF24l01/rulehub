@@ -5,11 +5,16 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/**'
   workflow_dispatch:
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-backend:
@@ -29,11 +34,13 @@ jobs:
       - name: Приведение имени репозитория к нижнему регистру
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Собираем Docker-образ с кешем
+      - name: Сборка и пуш образа backend
         uses: docker/build-push-action@v5
         with:
           context: backend
-          tags: ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:latest
+          tags: |
+            ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:latest
+            ghcr.io/${{ env.REPO_NAME }}/rulehub-backend:${{ env.IMAGE_TAG }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -55,12 +62,14 @@ jobs:
       - name: Приведение имени репозитория к нижнему регистру
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Собираем Docker-образ с кешем
+      - name: Сборка и пуш образа backend-tests
         uses: docker/build-push-action@v5
         with:
           context: backend
           file: backend/Dockerfile.test
-          tags: ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:latest
+          tags: |
+            ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:latest
+            ghcr.io/${{ env.REPO_NAME }}/rulehub-backend-tests:${{ env.IMAGE_TAG }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max

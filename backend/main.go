@@ -40,7 +40,9 @@ func main() {
 
 	e.Validator = &middleware.CustomValidator{Validator: validater}
 
-	e.Use(echoMw.Logger())
+	if os.Getenv("RUNTIME_PRODUCTION") != "true" {
+		e.Use(echoMw.Logger())
+	}
     e.Use(echoMw.Recover())
 
 	e.GET("/ping", func(c echo.Context) error {

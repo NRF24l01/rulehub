@@ -1,6 +1,7 @@
 networks:
   rulehub-net:
     driver: bridge
+    attachable: true
 
 volumes:
   rulehub-backend-data:

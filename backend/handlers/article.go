@@ -7,14 +7,13 @@ import (
 	"rulehub/models"
 	"rulehub/schemas"
 	"rulehub/utils"
-	"time"
 
 	"github.com/labstack/echo/v4"
 
 	googleUUID "github.com/google/uuid"
 )
 
-func (h* Handler) ArticleCreateHandler(c echo.Context) error {
+func (h *Handler) ArticleCreateHandler(c echo.Context) error {
 	article_data := c.Get("validatedBody").(*schemas.ArticleCreateRequest)
 	log.Printf("Creating article: %+v", article_data)
 
@@ -25,50 +24,51 @@ func (h* Handler) ArticleCreateHandler(c echo.Context) error {
 	}
 
 	article := models.Article{
-        Title:   article_data.Title,
-        Content: article_data.Content,
-        UserID:  c.Get("userID").(string),
-    }
-    if err := h.DB.Create(&article).Error; err != nil {
-        log.Printf("Error creating article: %v", err)
-        return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
-    }
+		Title:   article_data.Title,
+		Content: article_data.Content,
+		UserID:  c.Get("userID").(string),
+	}
+	if err := h.DB.Create(&article).Error; err != nil {
+		log.Printf("Error creating article: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+	}
 
-    // Create media entries if any
-    var mediaResponses []schemas.MediaCreateResponse
-    for _, mediaFileName := range article_data.Media {
-        name, URL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
-        if err != nil {
-            log.Printf("Error generating presigned URL: %v", err)
-            return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
-        }
+	var mediaResponses []schemas.MediaCreateResponse
+	for _, mediaFileName := range article_data.Media {
+		// Генерируем presigned PUT URL и UUID ключ для загрузки медиа
+		name, uploadURL, err := utils.GeneratePresignedPutURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), utils.GetPresignedLifetime())
+		if err != nil {
+			log.Printf("Error generating presigned PUT URL: %v", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+		}
 
-        media := models.Media{
-            FileName: mediaFileName,
-            S3Key:    name,
-            ArticleID: article.ID.String(),
-        }
-        mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
-            FileName: mediaFileName,
-            S3Key:    URL,
-        })
-        if err := h.DB.Create(&media).Error; err != nil {
-            log.Printf("Error creating media: %v", err)
-            return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
-        }
-    }
+		media := models.Media{
+			FileName:  mediaFileName,
+			S3Key:     name,
+			ArticleID: article.ID.String(),
+		}
+		if err := h.DB.Create(&media).Error; err != nil {
+			log.Printf("Error creating media: %v", err)
+			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+		}
+
+		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
+			FileName: mediaFileName,
+			S3Key:    uploadURL, // ссылка для загрузки
+		})
+	}
 
 	resp := schemas.ArticleResponse{
-		ID:             article.ID.String(),
-		Title:          article.Title,
-		Content:        article.Content,
+		ID:               article.ID.String(),
+		Title:            article.Title,
+		Content:          article.Content,
 		MediaPresignedUrl: mediaResponses,
-		AuthorUsername: user.Username,
+		AuthorUsername:   user.Username,
 	}
 	return c.JSON(http.StatusCreated, resp)
 }
 
-func (h* Handler) ArticleGetHandler(c echo.Context) error {
+func (h *Handler) ArticleGetHandler(c echo.Context) error {
 	uuid := c.Param("uuid")
 
 	if err := googleUUID.Validate(uuid); err != nil {
@@ -77,33 +77,31 @@ func (h* Handler) ArticleGetHandler(c echo.Context) error {
 	}
 
 	var article models.Article
-	// Preload User and Media relations
 	if err := h.DB.Preload("User").Preload("Media").Where("id = ?", uuid).First(&article).Error; err != nil {
 		log.Printf("Error getting article with id: %v, 404", uuid)
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "No such article"})
 	}
 
-	// Prepare media responses with presigned URLs
 	var mediaResponses []schemas.MediaCreateResponse
 	for _, media := range article.Media {
-		// Generate presigned URL for each media file
-		_, presignedURL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
+		// Генерируем presigned GET URL для существующего ключа media.S3Key
+		presignedURL, err := utils.GeneratePresignedGetURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), media.S3Key, utils.GetPresignedLifetime())
 		if err != nil {
-			log.Printf("Error generating presigned URL for media: %v", err)
-			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+			log.Printf("Error generating presigned GET URL for media, ignore: %v", err)
+			presignedURL = ""
 		}
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 			FileName: media.FileName,
-			S3Key:    presignedURL,
+			S3Key:    presignedURL, // ссылка для скачивания
 		})
 	}
 
 	resp := schemas.ArticleResponse{
-		ID: article.ID.String(),
-		Title:          article.Title,
-		Content:        article.Content,
+		ID:               article.ID.String(),
+		Title:            article.Title,
+		Content:          article.Content,
 		MediaPresignedUrl: mediaResponses,
-		AuthorUsername: article.User.Username,
+		AuthorUsername:   article.User.Username,
 	}
 	return c.JSON(http.StatusOK, resp)
 }
@@ -134,20 +132,19 @@ func (h *Handler) ArticleChangeHandler(c echo.Context) error {
 
 	var mediaResponses []schemas.MediaCreateResponse
 
-	// Handle media update
 	if articleData.Media != nil {
-		// Delete old media records
+		// Удаляем старые медиа
 		if err := h.DB.Where("article_id = ?", article.ID).Delete(&models.Media{}).Error; err != nil {
 			log.Printf("Error deleting old media: %v", err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 		}
 		article.Media = nil
 
-		// Add new media records and generate presigned upload URLs
+		// Добавляем новые медиа с presigned PUT URL для загрузки
 		for _, mediaFileName := range *articleData.Media {
-			name, uploadURL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
+			name, uploadURL, err := utils.GeneratePresignedPutURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), utils.GetPresignedLifetime())
 			if err != nil {
-				log.Printf("Error generating presigned URL: %v", err)
+				log.Printf("Error generating presigned PUT URL: %v", err)
 				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 			}
 			media := models.Media{
@@ -160,22 +157,23 @@ func (h *Handler) ArticleChangeHandler(c echo.Context) error {
 				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 			}
 			article.Media = append(article.Media, media)
+
 			mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 				FileName: mediaFileName,
-				S3Key:    uploadURL, // This is the presigned URL for upload
+				S3Key:    uploadURL, // ссылка для загрузки
 			})
 		}
 	} else {
-		// If media is not updated, return presigned URLs for existing media
+		// Если media не обновлялась, вернуть presigned GET URL для существующих
 		for _, media := range article.Media {
-			_, presignedURL, err := utils.FullGeneratePresignedURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), 1*time.Hour)
+			presignedURL, err := utils.GeneratePresignedGetURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), media.S3Key, utils.GetPresignedLifetime())
 			if err != nil {
-				log.Printf("Error generating presigned URL for media: %v", err)
-				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
+				log.Printf("Error generating presigned GET URL for media, ignore: %v", err)
+				presignedURL = "" 
 			}
 			mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 				FileName: media.FileName,
-				S3Key:    presignedURL,
+				S3Key:    presignedURL, // ссылка для скачивания
 			})
 		}
 	}

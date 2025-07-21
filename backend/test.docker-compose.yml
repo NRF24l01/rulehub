@@ -25,9 +25,12 @@ services:
       - .env
     environment:
       - POSTGRES_HOST=postgres
-      - POSTGRES_USERNAME=postgres
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_SSLMODE=disable
+      - POSTGRES_TIMEZONE=Europe/Moscow
       - MINIO_ENDPOINT=minio:9000
       - MINIO_USERNAME=miniadmin
       - MINIO_PASSWORD=miniadmin

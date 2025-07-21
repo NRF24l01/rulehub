@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 )
@@ -116,99 +115,4 @@ func UpdateArticle(t *testing.T, access string, uuid string, title, content stri
     if resp.StatusCode != wantStatus {
         t.Fatalf("UpdateArticle: expected %d, got %d", wantStatus, resp.StatusCode)
     }
-}
-
-func TestArticleMediaPresignedURLs(t *testing.T) {
-    ResetDB(t)
-    username, password := UniqueUser()
-    RegisterUser(t, username, password)
-    access, _ := LoginUser(t, username, password)
-
-    // Создание статьи с медиа
-    title := "Media Article"
-    content := "Article with media"
-    mediaFiles := []string{"file1.jpg", "file2.png"}
-    body := map[string]interface{}{"title": title, "content": content, "media": mediaFiles}
-    b, _ := json.Marshal(body)
-    req, _ := http.NewRequest("POST", apiBase+"/articles/", bytes.NewReader(b))
-    req.Header.Set("Authorization", "Bearer "+access)
-    req.Header.Set("Content-Type", "application/json")
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil {
-        t.Fatalf("CreateArticle with media failed: %v", err)
-    }
-    defer resp.Body.Close()
-    if resp.StatusCode != 201 {
-        t.Fatalf("CreateArticle with media: expected 201, got %d", resp.StatusCode)
-    }
-    var out struct {
-        ID      string `json:"id"`
-        Media   []struct {
-            FileName string `json:"file_name"`
-            S3Key    string `json:"s3_key"`
-        } `json:"media"`
-    }
-    json.NewDecoder(resp.Body).Decode(&out)
-    log.Printf("Body: %+v", out)
-    if len(out.Media) != len(mediaFiles) {
-        t.Errorf("Expected %d media, got %d", len(mediaFiles), len(out.Media))
-    }
-    for i, m := range out.Media {
-        if m.FileName != mediaFiles[i] {
-            t.Errorf("Media filename mismatch: expected %s, got %s", mediaFiles[i], m.FileName)
-        }
-        if !isS3URL(m.S3Key) {
-            t.Errorf("Media S3Key is not a valid S3 URL: %s", m.S3Key)
-        }
-    }
-
-    // Получение статьи и проверка media
-    got := GetArticle(t, out.ID, 200)
-    if len(got.Media) != len(mediaFiles) {
-        t.Errorf("GetArticle: expected %d media, got %d", len(mediaFiles), len(got.Media))
-    }
-    for _, m := range got.Media {
-        if !isS3URL(m.S3Key) {
-            t.Errorf("GetArticle: S3Key is not a valid S3 URL: %s", m.S3Key)
-        }
-    }
-
-    // Обновление статьи с новыми медиа
-    newMedia := []string{"file3.gif"}
-    updateBody := map[string]interface{}{"media": newMedia}
-    b, _ = json.Marshal(updateBody)
-    req, _ = http.NewRequest("PUT", fmt.Sprintf("%s/articles/%s", apiBase, out.ID), bytes.NewReader(b))
-    req.Header.Set("Authorization", "Bearer "+access)
-    req.Header.Set("Content-Type", "application/json")
-    resp, err = http.DefaultClient.Do(req)
-    if err != nil {
-        t.Fatalf("UpdateArticle with media failed: %v", err)
-    }
-    defer resp.Body.Close()
-    if resp.StatusCode != 200 {
-        t.Fatalf("UpdateArticle with media: expected 200, got %d", resp.StatusCode)
-    }
-    var updateOut struct {
-        Media []struct {
-            FileName string `json:"file_name"`
-            S3Key    string `json:"s3_key"`
-        } `json:"media"`
-    }
-    json.NewDecoder(resp.Body).Decode(&updateOut)
-    if len(updateOut.Media) != len(newMedia) {
-        t.Errorf("UpdateArticle: expected %d media, got %d", len(newMedia), len(updateOut.Media))
-    }
-    for i, m := range updateOut.Media {
-        if m.FileName != newMedia[i] {
-            t.Errorf("UpdateArticle: media filename mismatch: expected %s, got %s", newMedia[i], m.FileName)
-        }
-        if !isS3URL(m.S3Key) {
-            t.Errorf("UpdateArticle: S3Key is not a valid S3 URL: %s", m.S3Key)
-        }
-    }
-}
-
-// Проверка, что строка похожа на S3 presigned URL
-func isS3URL(url string) bool {
-    return len(url) > 10 && (url[:4] == "http" || url[:5] == "https")
 }

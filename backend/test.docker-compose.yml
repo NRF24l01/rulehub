@@ -35,6 +35,7 @@ services:
       - MINIO_USERNAME=minioadmin
       - MINIO_PASSWORD=minioadmin
       - MINIO_BUCKET=rulehub
+      - S3_PRESIGNED_LIFETIME=5
       - TEST_ENV=true
       - RUNTIME_PRODUCTION=true
     depends_on:

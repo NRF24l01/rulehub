@@ -144,7 +144,9 @@ jobs:
           NET=$(docker network ls --format '{{.Name}}' | grep 'rulehub-net$' || true)
           echo "DOCKER_COMPOSE_NETWORK=$NET" >> $GITHUB_ENV
 
-
+      - name: Отладка docker network
+        run: docker network inspect $DOCKER_COMPOSE_NETWORK
+  
       - name: Запуск тестов через docker run
         run: |
           docker run --rm \

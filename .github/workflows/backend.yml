@@ -105,6 +105,15 @@ jobs:
             sudo chmod +x /usr/local/bin/docker-compose
           fi
           docker-compose --version
+      
+      - name: Создание файла .env для тестового окружения
+        run: |
+          cat > backend/.env <<EOF
+          PASSWORD_SALT=salt_st_piterburg
+          PASSWORD_JWT_REFRESH_SECRET=jwt_test_secret_refresh
+          PASSWORD_JWT_ACCESS_SECRET=jwt_test_secret_access
+          EOF
+
 
       - name: Запуск сервисов тестового окружения
         run: |

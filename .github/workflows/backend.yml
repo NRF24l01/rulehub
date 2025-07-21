@@ -118,25 +118,26 @@ jobs:
         run: |
           docker-compose -f backend/test.docker-compose.yml up -d
 
-      - name: Ожидание готовности сервисов
+      - name: Ожидание готовности rulehub-backend
         run: |
           for i in {1..30}; do
-            unhealthy=$(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f backend/test.docker-compose.yml ps -q) | grep -v healthy || true)
-            if [ -z "$unhealthy" ]; then
-              echo "All services are healthy"
+            health_status=$(docker inspect --format='{{.State.Health.Status}}' rulehub-backend 2>/dev/null || echo "not-found")
+            echo "rulehub-backend health: $health_status"
+            if [ "$health_status" = "healthy" ]; then
+              echo "rulehub-backend is healthy"
               break
-            else
-              echo "Waiting for services to be healthy..."
-              sleep 5
             fi
+            sleep 5
           done
-          # Проверка на окончание цикла с проблемами
-          unhealthy=$(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f backend/test.docker-compose.yml ps -q) | grep -v healthy || true)
-          if [ -n "$unhealthy" ]; then
-            echo "Some services failed to become healthy"
-            docker-compose -f backend/test.docker-compose.yml logs
+      
+          # Финальная проверка и вывод логов при неудаче
+          health_status=$(docker inspect --format='{{.State.Health.Status}}' rulehub-backend 2>/dev/null || echo "not-found")
+          if [ "$health_status" != "healthy" ]; then
+            echo "rulehub-backend did not become healthy"
+            docker-compose -f backend/test.docker-compose.yml logs rulehub-backend
             exit 1
           fi
+        
       
       - name: Получение имени docker-compose сети
         id: network

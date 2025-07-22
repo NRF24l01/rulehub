@@ -37,6 +37,6 @@ jobs:
             context: frontend
             tags: |
                 ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable
-                push: true
-                cache-from: type=gha
-                cache-to: type=gha,mode=max
+            push: true
+            cache-from: type=gha
+            cache-to: type=gha,mode=max

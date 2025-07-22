@@ -1,5 +1,7 @@
 # Rule hub
 [![Backend CI/CD](https://github.com/NRF24l01/rulehub/actions/workflows/backend.yml/badge.svg)](https://github.com/NRF24l01/rulehub/actions/workflows/backend.yml)
+[![Frontend CI/CD](https://github.com/NRF24l01/rulehub/actions/workflows/frontend.yml/badge.svg)](https://github.com/NRF24l01/rulehub/actions/workflows/frontend.yml)
+
 *Просто хранилка маркдауна без возможности регистрации*
 
 ## Запуск бека

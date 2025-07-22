@@ -142,8 +142,8 @@
               </div>
             </div>
             <p class="text-gray-600 mb-4">"Этот сервис полностью изменил способ, которым мы управляем правилами нашего сообщества. Все стало намного проще и эффективнее."</p>
-            <div class="font-semibold">Александр Петров</div>
-            <div class="text-gray-500 text-sm">Администратор форума</div>
+            <div class="font-semibold">Стас Админов</div>
+            <div class="text-gray-500 text-sm">Модератор.</div>
           </div>
           
           <div class="bg-white p-6 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="300">
@@ -155,8 +155,8 @@
               </div>
             </div>
             <p class="text-gray-600 mb-4">"Удобный интерфейс и отличная адаптивность для мобильных устройств. Мы развернули сервис за считанные минуты."</p>
-            <div class="font-semibold">Мария Иванова</div>
-            <div class="text-gray-500 text-sm">Руководитель IT-отдела</div>
+            <div class="font-semibold">Стас Девопсов</div>
+            <div class="text-gray-500 text-sm">Единственный кто может общаться с кластером на балконе</div>
           </div>
           
           <div class="bg-white p-6 rounded-xl shadow-md" data-aos="fade-up" data-aos-delay="450">
@@ -167,8 +167,8 @@
                 </svg>
               </div>
             </div>
-            <p class="text-gray-600 mb-4">"Превосходное решение! Больше не нужно беспокоиться о форматировании и доступе к правилам - всё работает из коробки."</p>
-            <div class="font-semibold">Дмитрий Козлов</div>
+            <p class="text-gray-600 mb-4">"Превосходное решение! Больше не нужно беспокоиться о форматировании и доступе к правилам - всё работает из коробки. Игроков уже можно ограничивать!"</p>
+            <div class="font-semibold">Стас Козлов</div>
             <div class="text-gray-500 text-sm">Владелец игрового сервера</div>
           </div>
         </div>

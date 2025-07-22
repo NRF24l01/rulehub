@@ -1,0 +1,35 @@
+name: Build and Push Vue.js Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  workflow_dispatch:
+    
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout репозиторий
+        uses: actions/checkout@v4
+
+      - name: Логин в GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Приведение имени репозитория к нижнему регистру
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Собираем Docker-образ
+        run: docker build -f frontend/Dockerfile -t ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable frontend/
+
+      - name: Пушим образ в GHCR
+        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable

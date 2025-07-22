@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout репозиторий
         uses: actions/checkout@v4
+    
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Логин в GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
@@ -28,8 +31,12 @@ jobs:
       - name: Приведение имени репозитория к нижнему регистру
         run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Собираем Docker-образ
-        run: docker build -f frontend/Dockerfile -t ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable frontend/
-
-      - name: Пушим образ в GHCR
-        run: docker push ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable
+      - name: Сборка и пуш образа frontend
+        uses: docker/build-push-action@v5
+        with:
+            context: frontend
+            tags: |
+                ghcr.io/${{ env.REPO_NAME }}/rulehub-frontend:stable
+                push: true
+                cache-from: type=gha
+                cache-to: type=gha,mode=max

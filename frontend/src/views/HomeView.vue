@@ -230,7 +230,7 @@ function animateStats() {
   const sDaysStep = Math.ceil(sDays / steps);
 
   // clients будет расти бесконечно
-  const cStep = 2; // скорость роста клиентов
+  const cStep = 1; // скорость роста клиентов
 
   const interval = setInterval(() => {
     if (p < pTarget) p = Math.min(p + pStep, pTarget);

@@ -83,16 +83,15 @@ func (h *Handler) ArticleGetHandler(c echo.Context) error {
 	}
 
 	var mediaResponses []schemas.MediaCreateResponse
+	bucket := os.Getenv("MINIO_BUCKET")
+	endpoint := os.Getenv("MINIO_PUBLIC_ENDPOINT") // например, https://minio.example.com
+
 	for _, media := range article.Media {
-		// Генерируем presigned GET URL для существующего ключа media.S3Key
-		presignedURL, err := utils.GeneratePresignedGetURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), media.S3Key, utils.GetPresignedLifetime())
-		if err != nil {
-			log.Printf("Error generating presigned GET URL for media, ignore: %v", err)
-			presignedURL = ""
-		}
+		// Формируем постоянную публичную ссылку на файл
+		publicURL := endpoint + "/" + bucket + "/" + media.S3Key
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 			FileName: media.FileName,
-			S3Key:    presignedURL, // ссылка для скачивания
+			S3Key:    publicURL, // постоянная ссылка для скачивания
 		})
 	}
 

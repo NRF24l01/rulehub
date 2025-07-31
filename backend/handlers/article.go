@@ -84,14 +84,13 @@ func (h *Handler) ArticleGetHandler(c echo.Context) error {
 
 	var mediaResponses []schemas.MediaCreateResponse
 	bucket := os.Getenv("MINIO_BUCKET")
-	endpoint := os.Getenv("MINIO_PUBLIC_ENDPOINT") // например, https://minio.example.com
+	endpoint := os.Getenv("S3_PRESIGNED_LIFETIME")
 
 	for _, media := range article.Media {
-		// Формируем постоянную публичную ссылку на файл
 		publicURL := endpoint + "/" + bucket + "/" + media.S3Key
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 			FileName: media.FileName,
-			S3Key:    publicURL, // постоянная ссылка для скачивания
+			S3Key:    publicURL,
 		})
 	}
 

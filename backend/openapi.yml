@@ -144,36 +144,31 @@ paths:
           description: Требуется аутентификация
   
   /media/gen_static_get:
-    post:
+    get:
       tags:
-        - Media
+      - Media
       summary: Генерация статического S3 GET URL по UUID файла
       description: Возвращает временный публичный URL для скачивания файла из постоянного хранилища S3 по его UUID.
-      requestBody:
+      parameters:
+      - name: uuid
+        in: query
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                uuid:
-                  type: string
-                  format: uuid
-                  description: UUID файла в постоянном хранилище
-              required:
-                - uuid
+        schema:
+          type: string
+          format: uuid
+          description: UUID файла в постоянном хранилище
       responses:
         '200':
           description: Сгенерирован статический GET URL
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  static_url:
-                    type: string
-                    format: uri
-                    description: Временный публичный URL для скачивания файла
+              type: object
+              properties:
+                static_url:
+                type: string
+                format: uri
+                description: Временный публичный URL для скачивания файла
         '400':
           description: Некорректный UUID файла
         '404':

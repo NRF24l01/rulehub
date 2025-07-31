@@ -136,7 +136,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  url:
+                  temp_url:
                     type: string
                     format: uri
                     description: Временный URL S3 для загрузки файла

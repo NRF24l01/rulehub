@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { refreshAccessToken } from '@/axios'
 
 function isTokenExpired(token) {
   if (!token) return true
@@ -30,12 +31,25 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = null
   }
 
+  // Add method to refresh token
+  async function refreshToken() {
+    try {
+      const newToken = await refreshAccessToken()
+      setToken(newToken)
+      return true
+    } catch (error) {
+      logout()
+      return false
+    }
+  }
+
   return {
     accessToken,
     isAuthenticated,
     authHeader,
     setToken,
     logout,
+    refreshToken
   }
 }, {
   persist: {

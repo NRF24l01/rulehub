@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -38,7 +39,13 @@ func GeneratePresignedPutURL(client *minio.Client, bucketName string, expires ti
         return "", "", fmt.Errorf("error generating presigned PUT URL: %w", err)
     }
 
-    return uniqueID, presignedURL.String(), nil
+    urlStr := presignedURL.String()
+    urlStr, err = replaceHostWithBaseURL(urlStr)
+    if err != nil {
+        return "", "", fmt.Errorf("error replacing host with base URL: %w", err)
+    }
+
+    return uniqueID, urlStr, nil
 }
 
 func GeneratePresignedGetURL(client *minio.Client, bucketName string, objectKey string, expires time.Duration) (string, error) {
@@ -57,7 +64,53 @@ func GeneratePresignedGetURL(client *minio.Client, bucketName string, objectKey 
         return "", fmt.Errorf("error generating presigned GET URL: %w", err)
     }
 
-    return presignedURL.String(), nil
+    urlStr := presignedURL.String()
+    urlStr, err = replaceHostWithBaseURL(urlStr)
+    if err != nil {
+        return "", fmt.Errorf("error replacing host with base URL: %w", err)
+    }
+
+    return urlStr, nil
+}
+
+// replaceHostWithBaseURL replaces the host part of a URL with the S3_BASE_URL if set
+func replaceHostWithBaseURL(originalURL string) (string, error) {
+    baseURL := os.Getenv("S3_BASE_URL")
+    if baseURL == "" {
+        return originalURL, nil // Return original URL if S3_BASE_URL is not set
+    }
+
+    u, err := url.Parse(originalURL)
+    if err != nil {
+        return "", fmt.Errorf("error parsing URL: %w", err)
+    }
+
+    baseU, err := url.Parse(baseURL)
+    if err != nil {
+        return "", fmt.Errorf("error parsing base URL: %w", err)
+    }
+
+    // Replace the scheme, host, and port with those from the base URL
+    u.Scheme = baseU.Scheme
+    u.Host = baseU.Host
+
+    // Preserve the path from the base URL if it exists and append the original path
+    if baseU.Path != "" && baseU.Path != "/" {
+        // Ensure base path doesn't end with slash and original path doesn't start with slash
+        basePath := baseU.Path
+        if basePath[len(basePath)-1] == '/' {
+            basePath = basePath[:len(basePath)-1]
+        }
+        
+        origPath := u.Path
+        if len(origPath) > 0 && origPath[0] == '/' {
+            origPath = origPath[1:]
+        }
+        
+        u.Path = basePath + "/" + origPath
+    }
+
+    return u.String(), nil
 }
 
 func GetPresignedLifetime() time.Duration {

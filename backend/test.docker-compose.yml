@@ -43,7 +43,7 @@ services:
       postgres:
         condition: service_healthy
       createbuckets:
-        condition: service_started
+        condition: service_completed_successfully
       minio:
         condition: service_healthy
     volumes:
@@ -103,7 +103,7 @@ services:
       /bin/sh -c "
       /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
       /usr/bin/mc mb myminio/rulehub;
-      /usr/bin/mc policy set public myminio/rulehub;
+      /usr/bin/mc anonymous set download myminio/rulehub;
       exit 0;
       "
     networks:

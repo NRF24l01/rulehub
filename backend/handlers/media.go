@@ -37,3 +37,24 @@ func (h *Handler) MediaUploadTempHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, resp)
 }
+
+// Gen static get url by uuid
+func (h *Handler) MediaGetURLHandler(c echo.Context) error {
+	// Get bucket name from environment variable
+	bucketName := os.Getenv("MINIO_BUCKET")
+	if bucketName == "" {
+		log.Printf("MINIO_BUCKET environment variable not set")
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Server configuration error"})
+	}
+
+	// Get the file ID from the request parameters
+	fileID := c.Param("static_url")
+	if fileID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"message": "File ID is required"})
+	}
+
+	// Generate a presigned GET URL for the file
+	presignedURL := utils.GetPermanentObjectURL(bucketName, fileID)
+
+	return c.JSON(http.StatusOK, echo.Map{"url": presignedURL})
+}

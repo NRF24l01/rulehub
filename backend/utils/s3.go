@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -35,53 +36,20 @@ func CreateMinioClient() (*minio.Client, error) {
 func GeneratePresignedPutURL(client *minio.Client, bucketName string, expires time.Duration) (string, string, error) {
     uniqueID := uuid.New().String()
 
-    // Set initial status tag when creating the URL
-    putOpts := minio.PutObjectOptions{}
-    tagsMap := map[string]string{"status": "temporary"}
-    t, err := tags.NewTags(tagsMap, false)
-    if err != nil {
-        return "", "", fmt.Errorf("error creating tags: %w", err)
-    }
-    putOpts.UserTags = t.ToMap()
-
     presignedURL, err := client.PresignedPutObject(context.Background(), bucketName, uniqueID, expires)
     if err != nil {
         return "", "", fmt.Errorf("error generating presigned PUT URL: %w", err)
     }
 
     urlStr := presignedURL.String()
+    log.Printf("Generated presigned PUT URL: %s for file ID: %s", urlStr, uniqueID)
     urlStr, err = replaceHostWithBaseURL(urlStr)
-    err = os.Setenv("S3_BASE_URL", urlStr)
+    log.Printf("Replaced host in presigned URL: %s", urlStr)
     if err != nil {
-        return "", "", fmt.Errorf("error setting base URL: %w", err)
+        return "", "", fmt.Errorf("error replacing host with base URL: %w", err)
     }
 
     return uniqueID, urlStr, nil
-}
-
-func GeneratePresignedGetURL(client *minio.Client, bucketName string, objectKey string, expires time.Duration) (string, error) {
-    // Check if object exists
-    _, err := client.StatObject(context.Background(), bucketName, objectKey, minio.StatObjectOptions{})
-    if err != nil {
-        errResp := minio.ToErrorResponse(err)
-        if errResp.Code == "NoSuchKey" || errResp.Code == "NotFound" {
-            return "", fmt.Errorf("object %s does not exist in bucket %s", objectKey, bucketName)
-        }
-        return "", fmt.Errorf("error checking object existence: %w", err)
-    }
-
-    presignedURL, err := client.PresignedGetObject(context.Background(), bucketName, objectKey, expires, nil)
-    if err != nil {
-        return "", fmt.Errorf("error generating presigned GET URL: %w", err)
-    }
-
-    urlStr := presignedURL.String()
-    urlStr, err = replaceHostWithBaseURL(urlStr)
-    if err != nil {
-        return "", fmt.Errorf("error replacing host with base URL: %w", err)
-    }
-
-    return urlStr, nil
 }
 
 // GetPermanentObjectURL returns a permanent URL for an object

@@ -6,6 +6,14 @@ const api = axios.create({
   withCredentials: true
 })
 
+// Extract refresh token function to make it reusable
+export async function refreshAccessToken() {
+  const res = await axios.post(import.meta.env.VITE_BACKEND_URL + '/auth/refresh', {}, {
+    withCredentials: true
+  })
+  return res.data.access_token
+}
+
 api.interceptors.request.use(config => {
   const auth = useAuthStore()
   if (auth.accessToken) {
@@ -21,11 +29,7 @@ api.interceptors.response.use(
 
     if (error.response && error.response.status === 401) {
       try {
-        const res = await axios.post('/api/refresh', {}, {
-          withCredentials: true
-        })
-
-        const newToken = res.data.access_token
+        const newToken = await refreshAccessToken()
         auth.setToken(newToken)
 
         const config = error.config

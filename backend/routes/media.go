@@ -11,5 +11,5 @@ func RegisterMediaRoutes(e *echo.Echo, h* handlers.Handler) {
 	group := e.Group("/media")
 
 	group.POST("/upload-temp", h.MediaUploadTempHandler, middleware.JWTMiddleware())
-	group.GET("/get-url/:static_url", h.MediaGetURLHandler, middleware.JWTMiddleware())
+	group.GET("/gen_static_get", h.MediaGetURLHandler, middleware.JWTMiddleware())
 }

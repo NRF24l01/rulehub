@@ -48,7 +48,7 @@ func (h *Handler) MediaGetURLHandler(c echo.Context) error {
 	}
 
 	// Get the file ID from the request parameters
-	fileID := c.Param("static_url")
+	fileID := c.QueryParam("uuid")
 	if fileID == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{"message": "File ID is required"})
 	}
@@ -56,5 +56,5 @@ func (h *Handler) MediaGetURLHandler(c echo.Context) error {
 	// Generate a presigned GET URL for the file
 	presignedURL := utils.GetPermanentObjectURL(bucketName, fileID)
 
-	return c.JSON(http.StatusOK, echo.Map{"url": presignedURL})
+	return c.JSON(http.StatusOK, echo.Map{"static_url": presignedURL})
 }

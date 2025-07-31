@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/tags"
 )
 
 func CreateMinioClient() (*minio.Client, error) {
@@ -34,6 +35,15 @@ func CreateMinioClient() (*minio.Client, error) {
 func GeneratePresignedPutURL(client *minio.Client, bucketName string, expires time.Duration) (string, string, error) {
     uniqueID := uuid.New().String()
 
+    // Set initial status tag when creating the URL
+    putOpts := minio.PutObjectOptions{}
+    tagsMap := map[string]string{"status": "temporary"}
+    t, err := tags.NewTags(tagsMap, false)
+    if err != nil {
+        return "", "", fmt.Errorf("error creating tags: %w", err)
+    }
+    putOpts.UserTags = t.ToMap()
+
     presignedURL, err := client.PresignedPutObject(context.Background(), bucketName, uniqueID, expires)
     if err != nil {
         return "", "", fmt.Errorf("error generating presigned PUT URL: %w", err)
@@ -41,15 +51,16 @@ func GeneratePresignedPutURL(client *minio.Client, bucketName string, expires ti
 
     urlStr := presignedURL.String()
     urlStr, err = replaceHostWithBaseURL(urlStr)
+    err = os.Setenv("S3_BASE_URL", urlStr)
     if err != nil {
-        return "", "", fmt.Errorf("error replacing host with base URL: %w", err)
+        return "", "", fmt.Errorf("error setting base URL: %w", err)
     }
 
     return uniqueID, urlStr, nil
 }
 
 func GeneratePresignedGetURL(client *minio.Client, bucketName string, objectKey string, expires time.Duration) (string, error) {
-    // Проверка существования объекта
+    // Check if object exists
     _, err := client.StatObject(context.Background(), bucketName, objectKey, minio.StatObjectOptions{})
     if err != nil {
         errResp := minio.ToErrorResponse(err)
@@ -71,6 +82,63 @@ func GeneratePresignedGetURL(client *minio.Client, bucketName string, objectKey 
     }
 
     return urlStr, nil
+}
+
+// GetPermanentObjectURL returns a permanent URL for an object
+func GetPermanentObjectURL(bucketName, objectKey string) string {
+    baseURL := os.Getenv("S3_BASE_URL")
+    if baseURL == "" {
+        // Fallback to a default format if S3_BASE_URL is not set
+        return fmt.Sprintf("/api/files/%s/%s", bucketName, objectKey)
+    }
+    
+    // Ensure baseURL doesn't end with slash
+    if baseURL[len(baseURL)-1] == '/' {
+        baseURL = baseURL[:len(baseURL)-1]
+    }
+    
+    return fmt.Sprintf("%s/%s/%s", baseURL, bucketName, objectKey)
+}
+
+// ChangeObjectStatusToPermanent changes the status tag of an object from temporary to permanent
+func ChangeObjectStatusToPermanent(client *minio.Client, bucketName, objectName string) error {
+    // Get current tags if any
+    t, err := client.GetObjectTagging(context.Background(), bucketName, objectName, minio.GetObjectTaggingOptions{})
+    if err != nil {
+        return fmt.Errorf("error getting object tags: %w", err)
+    }
+
+    // Create or update the status tag
+    tagsMap := t.ToMap()
+    if tagsMap == nil {
+        tagsMap = make(map[string]string)
+    }
+    tagsMap["status"] = "permanent"
+
+    // Apply the updated tags
+    newTags, err := tags.NewTags(tagsMap, false)
+    if err != nil {
+        return fmt.Errorf("error creating new tags: %w", err)
+    }
+
+    // Use PutObjectTagging with the required PutObjectTaggingOptions parameter
+    err = client.PutObjectTagging(context.Background(), bucketName, objectName, newTags, minio.PutObjectTaggingOptions{})
+    if err != nil {
+        return fmt.Errorf("error setting object tags: %w", err)
+    }
+
+    return nil
+}
+
+// IsObjectTemporary checks if an object has the temporary status tag
+func IsObjectTemporary(client *minio.Client, bucketName, objectName string) (bool, error) {
+    t, err := client.GetObjectTagging(context.Background(), bucketName, objectName, minio.GetObjectTaggingOptions{})
+    if err != nil {
+        return false, fmt.Errorf("error getting object tags: %w", err)
+    }
+
+    tagsMap := t.ToMap()
+    return tagsMap["status"] == "temporary", nil
 }
 
 // replaceHostWithBaseURL replaces the host part of a URL with the S3_BASE_URL if set
@@ -116,7 +184,7 @@ func replaceHostWithBaseURL(originalURL string) (string, error) {
 func GetPresignedLifetime() time.Duration {
 	secStr := os.Getenv("S3_PRESIGNED_LIFETIME")
 	if secStr == "" {
-		return time.Hour // дефолт 1 час
+		return time.Hour // default 1 hour
 	}
 	sec, err := strconv.Atoi(secStr)
 	if err != nil || sec <= 0 {

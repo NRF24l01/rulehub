@@ -3,10 +3,13 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"rulehub/models"
 	"rulehub/schemas"
 	"rulehub/utils"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -34,17 +37,23 @@ func (h *Handler) ArticleCreateHandler(c echo.Context) error {
 	}
 
 	var mediaResponses []schemas.MediaCreateResponse
-	for _, mediaFileName := range article_data.Media {
-		// Генерируем presigned PUT URL и UUID ключ для загрузки медиа
-		name, uploadURL, err := utils.GeneratePresignedPutURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), utils.GetPresignedLifetime())
-		if err != nil {
-			log.Printf("Error generating presigned PUT URL: %v", err)
+	for _, mediaPath := range article_data.Media {
+		// Extract the S3 key from the media path (which contains the temporary file location)
+		s3Key := extractS3KeyFromPath(mediaPath)
+
+		// Change file status from temporary to permanent
+		if err := utils.ChangeObjectStatusToPermanent(h.MinIOClient, os.Getenv("MINIO_BUCKET"), s3Key); err != nil {
+			log.Printf("Error changing file status to permanent: %v", err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 		}
 
+		// Get original filename
+		originalFileName := getOriginalFileName(mediaPath)
+
+		// Save the permanent file info in database
 		media := models.Media{
-			FileName:  mediaFileName,
-			S3Key:     name,
+			FileName:  originalFileName,
+			S3Key:     s3Key,
 			ArticleID: article.ID.String(),
 		}
 		if err := h.DB.Create(&media).Error; err != nil {
@@ -52,9 +61,12 @@ func (h *Handler) ArticleCreateHandler(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 		}
 
+		// Generate a permanent URL for the file
+		permanentURL := utils.GetPermanentObjectURL(os.Getenv("MINIO_BUCKET"), s3Key)
+
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
-			FileName: mediaFileName,
-			S3Key:    uploadURL, // ссылка для загрузки
+			FileName: originalFileName,
+			S3Key:    permanentURL, // Permanent URL for the file
 		})
 	}
 
@@ -66,6 +78,43 @@ func (h *Handler) ArticleCreateHandler(c echo.Context) error {
 		AuthorUsername:   user.Username,
 	}
 	return c.JSON(http.StatusCreated, resp)
+}
+
+// extractS3KeyFromPath extracts the S3 key from a file path
+func extractS3KeyFromPath(filePath string) string {
+	// The path might contain the full URL or just the object key
+	// If it's a URL, extract just the object key part
+	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
+		parsedURL, err := url.Parse(filePath)
+		if err == nil {
+			// Extract the object key from the URL path
+			parts := strings.Split(parsedURL.Path, "/")
+			// Usually the last part is the object key
+			if len(parts) > 0 {
+				return parts[len(parts)-1]
+			}
+		}
+	}
+
+	// If it's not a URL or parsing failed, treat it as a direct path
+	// Just get the base filename which should be the S3 key
+	return filepath.Base(filePath)
+}
+
+// getOriginalFileName extracts the original file name
+func getOriginalFileName(filePath string) string {
+	// Get the base filename first
+	baseName := filepath.Base(filePath)
+
+	// If the filename contains metadata like UUID, extract just the original part
+	// This implementation depends on your naming convention
+	// Example: if format is "UUID_originalname.ext"
+	parts := strings.SplitN(baseName, "_", 2)
+	if len(parts) > 1 {
+		return parts[1]
+	}
+
+	return baseName
 }
 
 func (h *Handler) ArticleGetHandler(c echo.Context) error {
@@ -83,14 +132,15 @@ func (h *Handler) ArticleGetHandler(c echo.Context) error {
 	}
 
 	var mediaResponses []schemas.MediaCreateResponse
-	bucket := os.Getenv("MINIO_BUCKET")
-	endpoint := os.Getenv("S3_PRESIGNED_LIFETIME")
+	bucketName := os.Getenv("MINIO_BUCKET")
 
 	for _, media := range article.Media {
-		publicURL := endpoint + "/" + bucket + "/" + media.S3Key
+		// Generate permanent URL for each media file
+		permanentURL := utils.GetPermanentObjectURL(bucketName, media.S3Key)
+
 		mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 			FileName: media.FileName,
-			S3Key:    publicURL,
+			S3Key:    permanentURL,
 		})
 	}
 
@@ -131,23 +181,31 @@ func (h *Handler) ArticleChangeHandler(c echo.Context) error {
 	var mediaResponses []schemas.MediaCreateResponse
 
 	if articleData.Media != nil {
-		// Удаляем старые медиа
+		// Delete old media from database
 		if err := h.DB.Where("article_id = ?", article.ID).Delete(&models.Media{}).Error; err != nil {
 			log.Printf("Error deleting old media: %v", err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 		}
 		article.Media = nil
 
-		// Добавляем новые медиа с presigned PUT URL для загрузки
-		for _, mediaFileName := range *articleData.Media {
-			name, uploadURL, err := utils.GeneratePresignedPutURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), utils.GetPresignedLifetime())
-			if err != nil {
-				log.Printf("Error generating presigned PUT URL: %v", err)
+		// Process new media files that are already uploaded as temporary
+		for _, mediaPath := range *articleData.Media {
+			// Extract the S3 key from the media path
+			s3Key := extractS3KeyFromPath(mediaPath)
+
+			// Change file status from temporary to permanent
+			if err := utils.ChangeObjectStatusToPermanent(h.MinIOClient, os.Getenv("MINIO_BUCKET"), s3Key); err != nil {
+				log.Printf("Error changing file status to permanent: %v", err)
 				return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 			}
+
+			// Get original filename
+			originalFileName := getOriginalFileName(mediaPath)
+
+			// Save the permanent file info in database
 			media := models.Media{
-				FileName:  mediaFileName,
-				S3Key:     name,
+				FileName:  originalFileName,
+				S3Key:     s3Key,
 				ArticleID: article.ID.String(),
 			}
 			if err := h.DB.Create(&media).Error; err != nil {
@@ -156,22 +214,22 @@ func (h *Handler) ArticleChangeHandler(c echo.Context) error {
 			}
 			article.Media = append(article.Media, media)
 
+			// Generate a permanent URL for the file
+			permanentURL := utils.GetPermanentObjectURL(os.Getenv("MINIO_BUCKET"), s3Key)
+
 			mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
-				FileName: mediaFileName,
-				S3Key:    uploadURL, // ссылка для загрузки
+				FileName: originalFileName,
+				S3Key:    permanentURL, // Permanent URL for the file
 			})
 		}
 	} else {
-		// Если media не обновлялась, вернуть presigned GET URL для существующих
+		// If media was not updated, return permanent URLs for existing files
 		for _, media := range article.Media {
-			presignedURL, err := utils.GeneratePresignedGetURL(h.MinIOClient, os.Getenv("MINIO_BUCKET"), media.S3Key, utils.GetPresignedLifetime())
-			if err != nil {
-				log.Printf("Error generating presigned GET URL for media, ignore: %v", err)
-				presignedURL = "" 
-			}
+			permanentURL := utils.GetPermanentObjectURL(os.Getenv("MINIO_BUCKET"), media.S3Key)
+
 			mediaResponses = append(mediaResponses, schemas.MediaCreateResponse{
 				FileName: media.FileName,
-				S3Key:    presignedURL, // ссылка для скачивания
+				S3Key:    permanentURL, // Permanent URL for the file
 			})
 		}
 	}

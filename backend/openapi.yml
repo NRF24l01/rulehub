@@ -128,19 +128,6 @@ paths:
       description: Загружает файл во временное хранилище S3. После создания или обновления статьи, временные файлы переносятся в постоянное хранилище.
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: Файл для загрузки (изображение, видео и т.д.)
-              required:
-                - file
       responses:
         '200':
           description: Файл успешно загружен
@@ -149,15 +136,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  temp_url:
+                  url:
                     type: string
                     format: uri
-                    description: Временный URL загруженного файла
-                  file_id:
-                    type: string
-                    description: Идентификатор временного файла для последующего использования
-        '400':
-          description: Неверный формат файла или превышен лимит размера
+                    description: Временный URL S3 для загрузки файла
         '401':
           description: Требуется аутентификация
 

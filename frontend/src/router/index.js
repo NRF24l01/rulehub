@@ -25,12 +25,21 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
+  
   if (to.meta.guestOnly && auth.isAuthenticated) {
     next({ name: 'home' })
   } else if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    next({ name: 'login' })
+    // Try to refresh token if not authenticated
+    const refreshed = await auth.refreshToken()
+    
+    // Check authentication status again after refresh attempt
+    if (refreshed && auth.isAuthenticated) {
+      next() // Continue to requested route if refresh worked
+    } else {
+      next({ name: 'login' }) // Redirect to login if refresh failed
+    }
   } else {
     next()
   }

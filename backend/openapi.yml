@@ -120,6 +120,47 @@ paths:
         '401':
           description: Недействительный refresh_token
 
+  /media/upload-temp:
+    post:
+      tags:
+        - Media
+      summary: Загрузка временного медиафайла
+      description: Загружает файл во временное хранилище S3. После создания или обновления статьи, временные файлы переносятся в постоянное хранилище.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл для загрузки (изображение, видео и т.д.)
+              required:
+                - file
+      responses:
+        '200':
+          description: Файл успешно загружен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  temp_url:
+                    type: string
+                    format: uri
+                    description: Временный URL загруженного файла
+                  file_id:
+                    type: string
+                    description: Идентификатор временного файла для последующего использования
+        '400':
+          description: Неверный формат файла или превышен лимит размера
+        '401':
+          description: Требуется аутентификация
+
   /articles:
     post:
       tags:
@@ -240,6 +281,8 @@ tags:
     description: Методы аутентификации и авторизации
   - name: Articles
     description: Методы для работы со статьями
+  - name: Media
+    description: Методы для работы с медиафайлами
   - name: Dev
     description: Методы для разработки и тестирования (только для DEV)
 

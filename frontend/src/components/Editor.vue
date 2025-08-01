@@ -1,85 +1,110 @@
 <template>
   <div class="space-y-4 p-4">
-    <MdEditor v-model="markdownText" height="300px" language="en-US" @uploadImg="handleEditorImageInsert" />
+    <MdEditor
+      v-model="localMarkdown"
+      height="300px"
+      language="en-US"
+      @uploadImg="handleEditorImageInsert"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { MdEditor, MdPreview } from 'md-editor-v3'
+import { ref, watch, defineProps, defineEmits } from 'vue'
+import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import { useAuthStore } from '../stores/auth'
 import api from '../axios'
 
-const authStore = useAuthStore()
-const markdownText = ref('# Пример markdown')
+const props = defineProps({
+  content: {
+    type: String,
+    default: ''
+  },
+  images: {
+    type: Array,
+    default: () => []
+  }
+})
 
-const images = ref([]) // { file, name, blobUrl }
 
-function handleEditorImageInsert(files, callback) {
-  const uploadImg = async (files, callback) => {
-    const res = await Promise.all(
-      files.map((file) => {
-        return new Promise((resolve, reject) => {
-          if (!file.type.startsWith('image/')) {
-            reject('Not an image file');
-            return;
+const emit = defineEmits(['update:content', 'update:images'])
+
+const localMarkdown = ref(props.content)
+const localImages = ref([...props.images])
+
+watch(() => props.content, val => localMarkdown.value = val)
+
+function arraysShallowEqual(a, b) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+watch(() => props.images, val => {
+  if (!arraysShallowEqual(val, localImages.value)) {
+    localImages.value = [...val]
+  }
+})
+
+watch(localMarkdown, val => {
+  if (val !== props.content) emit('update:content', val)
+})
+watch(localImages, val => {
+  if (!arraysShallowEqual(val, props.images)) emit('update:images', val)
+})
+
+async function handleEditorImageInsert(files, callback) {
+  try {
+    const results = await Promise.all(
+      files.map(async (file) => {
+        if (!file.type.startsWith('image/')) throw new Error('Not an image')
+
+        const form = new FormData()
+        form.append('file', file)
+
+        const response = await api.post(
+          import.meta.env.VITE_BACKEND_URL + '/media/upload-temp',
+          form,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        )
+
+        const tempUrl = response.data.temp_url
+        const fileId = response.data.file_id
+
+        await fetch(tempUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type }
+        })
+
+        let staticUrl = tempUrl
+        try {
+          const res = await api.get(
+            import.meta.env.VITE_BACKEND_URL + '/media/gen_static_get',
+            { params: { uuid: fileId } }
+          )
+          staticUrl = res.data.static_url
+        } catch (_) {
+          console.warn('Fallback to temp URL')
+        }
+
+        localImages.value = [
+          ...localImages.value,
+          {
+            file,
+            name: file.name,
+            blobUrl: staticUrl
           }
-          
-          const form = new FormData();
-          form.append('file', file);
-          
-          api.post(import.meta.env.VITE_BACKEND_URL + '/media/upload-temp', form, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          })
-          .then(async response => {
-            const tempUrl = response.data.temp_url;
-            const fileId = response.data.file_id;
-
-            // Upload to S3
-            await fetch(tempUrl, {
-              method: 'PUT',
-              body: file,
-              headers: {
-                'Content-Type': file.type
-              }
-            });
-
-            // Request static GET URL by fileId
-            let staticUrl = '';
-            try {
-              const staticRes = await api.get(
-                import.meta.env.VITE_BACKEND_URL + '/media/gen_static_get',
-                { params: { uuid: fileId } }
-              );
-              staticUrl = staticRes.data.static_url;
-            } catch (err) {
-              console.error('Failed to get static GET url:', err);
-              staticUrl = tempUrl; // fallback to temp url
-            }
-
-            images.value.push({
-              file,
-              name: file.name,
-              blobUrl: staticUrl
-            });
-
-            resolve({ temp_url: staticUrl });
-          })
-          .catch(error => {
-            console.error('Failed to upload image:', error);
-            reject(error);
-          });
-        });
+        ]
+        return staticUrl
       })
-    );
+    )
 
-    callback(res.map((item) => item.temp_url));
-  };
-
-  uploadImg(files, callback);
-  return;
+    callback(results)
+  } catch (err) {
+    console.error('Image upload failed:', err)
+  }
 }
 </script>

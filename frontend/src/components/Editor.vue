@@ -1,35 +1,6 @@
 <template>
   <div class="space-y-4 p-4">
-
-    <!-- Markdown редактор -->
     <MdEditor v-model="markdownText" height="300px" language="en-US" @uploadImg="handleEditorImageInsert" />
-
-    <!-- Просмотр markdown -->
-    <div class="border p-4 bg-gray-50 rounded">
-      <h2 class="font-bold text-lg mb-2">Предпросмотр</h2>
-      <MdPreview :modelValue="markdownText" />
-    </div>
-
-    <!-- Загрузка изображений -->
-    <div class="space-y-2">
-      <h2 class="font-bold text-lg">Фотографии</h2>
-      <input type="file" multiple accept="image/*" @change="handleFiles" />
-
-      <ul>
-        <li v-for="(file, idx) in imageFiles" :key="idx" class="flex items-center gap-2">
-          <img :src="file.preview" alt="" class="w-16 h-16 object-cover rounded border" />
-          <span>{{ file.name }}</span>
-        </li>
-      </ul>
-    </div>
-
-    <!-- Кнопка отправки -->
-    <button
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      @click="submitForm"
-    >
-      Отправить
-    </button>
   </div>
 </template>
 
@@ -111,55 +82,4 @@ function handleEditorImageInsert(files, callback) {
   uploadImg(files, callback);
   return;
 }
-
-const imageFiles = ref([])
-
-function handleFiles(event) {
-  const input = event.target
-  if (!input.files) return
-
-  for (const file of Array.from(input.files)) {
-    if (!file.type.startsWith('image/')) continue
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      imageFiles.value.push({
-        file,
-        name: file.name,
-        preview: reader.result
-      })
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-async function submitForm() {
-  const formData = new FormData()
-  formData.append('markdown', markdownText.value)
-
-  imageFiles.value.forEach((f, idx) => {
-    formData.append(`images[${idx}]`, f.file, f.name)
-  })
-
-  try {
-    // Use axios instance for consistency with auth
-    const res = await api.post('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-
-    alert('Успешно отправлено')
-  } catch (err) {
-    console.error(err)
-    alert('Ошибка при отправке')
-  }
-}
 </script>
-
-<style scoped>
-ul {
-  list-style: none;
-  padding: 0;
-}
-</style>

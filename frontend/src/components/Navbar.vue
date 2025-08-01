@@ -6,6 +6,12 @@
             <!-- Project Name -->
             <span class="text-2xl font-bold text-gray-800">Rule Hub</span>
         </div>
+        <div class="flex space-x-8 items-center" v-if="isAuthenticated">
+            <a href="/create" class="flex items-center text-lg text-gray-600 hover:text-blue-600 font-medium">
+                <i class="fa fa-plus-circle mr-2"></i>
+                Create Rule
+            </a>
+        </div>
         <div class="flex space-x-8 items-center">
             <a href="/about" class="flex items-center text-lg text-gray-600 hover:text-blue-600 font-medium">
             <i class="fa fa-info-circle mr-2"></i>
@@ -18,3 +24,12 @@
         </div>
     </nav>
 </template>
+
+<script setup>
+import { ref } from 'vue';
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore();
+
+const isAuthenticated = ref(authStore.isAuthenticated);
+</script>

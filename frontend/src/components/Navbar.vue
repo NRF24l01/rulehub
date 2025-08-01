@@ -11,7 +11,7 @@
             <i class="fa fa-info-circle mr-2"></i>
             About
             </a>
-            <a href="https://github.com/" target="_blank" class="flex items-center text-lg text-gray-600 hover:text-blue-600 font-medium">
+            <a href="https://github.com/NRF24l01/rulehub" target="_blank" class="flex items-center text-lg text-gray-600 hover:text-blue-600 font-medium">
             <i class="fab fa-github mr-2"></i>
             GitHub
             </a>

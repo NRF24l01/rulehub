@@ -43,6 +43,10 @@ func (h *Handler) ArticleCreateHandler(c echo.Context) error {
 
 		// Change file status from temporary to permanent
 		if err := utils.ChangeObjectStatusToPermanent(h.MinIOClient, os.Getenv("MINIO_BUCKET"), s3Key); err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				log.Printf("Media not found in storage: %v", s3Key)
+				return c.JSON(http.StatusNotFound, echo.Map{"message": "Media not found"})
+			}
 			log.Printf("Error changing file status to permanent: %v", err)
 			return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Internal server error"})
 		}

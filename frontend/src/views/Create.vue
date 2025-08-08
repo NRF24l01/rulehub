@@ -16,7 +16,13 @@
   <div class="flex flex-col space-y-4 mt-4 max-w-xl mx-auto">
     <button
       @click="handleClick"
-      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+      class="bg-blue-600 text-white px-4 py-2 rounded transition"
+      :class="[
+      (error !== '' || articleName.trim() === '' || content.trim() === '')
+        ? 'opacity-50 cursor-not-allowed'
+        : 'hover:bg-blue-700'
+      ]"
+      :disabled="error !== '' || articleName.trim() === '' || content.trim() === ''"
     >
       Сохранить
     </button>

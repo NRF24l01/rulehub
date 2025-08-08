@@ -8,6 +8,11 @@
     />
   </div>
   <Editor v-model:content="content" v-model:images="images" />
+  <div v-if="error !== ''" class="flex justify-center mt-4">
+    <div class="shadow-md rounded px-6 py-4 text-red-600 text-sm max-w-md w-full text-center border border-red-500 bg-red-100">
+      {{ error }}
+    </div>
+  </div>
   <div class="flex flex-col space-y-4 mt-4 max-w-xl mx-auto">
     <button
       @click="handleClick"
@@ -16,7 +21,6 @@
       Сохранить
     </button>
   </div>
-  <div v-if="error !== ''" class="text-red-500 text-sm mt-2">{{ error }}</div>
 </template>
 
 <script setup>
@@ -29,8 +33,24 @@ const content = ref('# Пример markdown')
 const images = ref([]);
 const error = ref('');
 
+function validate() {
+  if (articleName.value.trim() === '') {
+    error.value = 'Название статьи не может быть пустым';
+    return false;
+  }
+  if (content.value.trim() === '') {
+    error.value = 'Содержание статьи не может быть пустым';
+    return false;
+  }
+  error.value = '';
+  return true;
+}
+
 async function handleClick() {
   error.value = '';
+  if (!validate()) {
+    return;
+  }
   try {
     const res = await api.post(
       import.meta.env.VITE_BACKEND_URL + "/articles/",

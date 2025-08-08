@@ -61,9 +61,9 @@ async function handleClick() {
     const res = await api.post(
       import.meta.env.VITE_BACKEND_URL + "/articles/",
       {
-        name: articleName.value,
+        title: articleName.value,
         content: content.value,
-        images: images.value
+        media: images.value
       }
     );
     if (res.status !== 201) {

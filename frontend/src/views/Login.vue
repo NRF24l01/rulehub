@@ -190,7 +190,7 @@ async function handleLogin() {
       const data = await res.json()
       if (data.access_token) {
         auth.setToken(data.access_token) // Сохраняем access_token в Pinia
-        router.push('/dashboard') // Переходим в SPA на dashboard без перезагрузки
+        router.push('/') // Переходим в SPA на dashboard без перезагрузки
       } else {
         loginError.value = 'Сервер не вернул access_token'
       }

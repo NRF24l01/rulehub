@@ -95,7 +95,8 @@ async function handleEditorImageInsert(files, callback) {
           {
             file,
             name: file.name,
-            blobUrl: staticUrl
+            blobUrl: staticUrl,
+            fileID: fileId
           }
         ]
         return staticUrl

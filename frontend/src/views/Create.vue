@@ -39,6 +39,12 @@ const content = ref('# Пример markdown')
 const images = ref([]);
 const error = ref('');
 
+watch([articleName, content, images], () => {
+  if (error.value !== '') {
+    error.value = '';
+  }
+});
+
 function validate() {
   if (articleName.value.trim() === '') {
     error.value = 'Название статьи не может быть пустым';
@@ -63,7 +69,7 @@ async function handleClick() {
       {
         title: articleName.value,
         content: content.value,
-        media: images.value
+        media: images.value.map(img => img.fileID)
       }
     );
     if (res.status !== 201) {

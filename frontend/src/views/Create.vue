@@ -33,11 +33,14 @@
 import Editor from '@/components/Editor.vue';
 import { ref, watch } from 'vue';
 import api from '../axios'
+import { useRouter } from 'vue-router'
 
 const articleName = ref('');
 const content = ref('# Пример markdown')
 const images = ref([]);
 const error = ref('');
+
+const router = useRouter();
 
 watch([articleName, content, images], () => {
   if (error.value !== '') {
@@ -77,12 +80,15 @@ async function handleClick() {
       return;
     }
     error.value = res.data.id;
+    // Редирект на страницу статьи по имени и id через роутер
+    router.push({ name: 'article', params: { id: res.data.id } });
   } catch (e) {
     // axios error: e.response содержит ответ сервера
     error.value =
       e?.response?.data?.error ||
       e?.response?.data?.message ||
       'Ошибка при создании статьи';
+    console.log(e);
   }
 }
 </script>

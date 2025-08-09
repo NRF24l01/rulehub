@@ -97,3 +97,26 @@ watch(
   }
 )
 </script>
+
+<style>
+/* Применяем стили ко всем спискам внутри компонента */
+ul, ol {
+  list-style-position: inside !important;
+  margin-left: 1.5em !important;
+  padding-left: 0 !important;
+  list-style: revert !important;
+}
+
+ul {
+  list-style-type: disc !important;
+}
+
+ol {
+  list-style-type: decimal !important;
+}
+
+li {
+  display: list-item !important;
+  margin-bottom: 0.25em !important;
+}
+</style>

@@ -15,6 +15,8 @@ function isTokenExpired(token) {
 
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref(null)
+  const user_id = ref(null)
+  const username = ref(null)
 
   const isAuthenticated = computed(() =>
     !!accessToken.value && !isTokenExpired(accessToken.value)
@@ -25,10 +27,26 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setToken(token) {
     accessToken.value = token
+    // Extract user_id and username from JWT
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        user_id.value = payload.user_id || null
+        username.value = payload.username || null
+      } catch (e) {
+        user_id.value = null
+        username.value = null
+      }
+    } else {
+      user_id.value = null
+      username.value = null
+    }
   }
 
   function logout() {
     accessToken.value = null
+    user_id.value = null
+    username.value = null
   }
 
   // Add method to refresh token
@@ -45,6 +63,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     accessToken,
+    user_id,
+    username,
     isAuthenticated,
     authHeader,
     setToken,

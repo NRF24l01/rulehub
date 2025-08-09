@@ -24,10 +24,6 @@
     <!-- Article -->
     <div v-else class="flex flex-col lg:flex-row gap-8 min-h-screen">
       <article class="flex-1">
-        <h1 class="text-3xl md:text-4xl xl:text-5xl font-bold tracking-tight text-gray-900 mb-6">
-          {{ article.title }}
-        </h1>
-
         <!-- Markdown Content -->
         <div>
           <MdPreview :id="mdId" :modelValue="article.content" />
@@ -46,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import axios from 'axios'
 import { MdPreview, MdCatalog } from 'md-editor-v3'
@@ -90,4 +86,14 @@ function onImgErr(ev) {
 const scrollElement = document.documentElement
 
 onMounted(loadArticle)
+
+// Обновляем заголовок вкладки при изменении article.title
+watch(
+  () => article.value?.title,
+  (title) => {
+    if (title) {
+      document.title = title
+    }
+  }
+)
 </script>

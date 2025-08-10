@@ -10,7 +10,7 @@
             <!-- Navigation Links -->
             <div class="flex items-center space-x-8">
                 <router-link 
-                    v-if="isAuthenticated" 
+                    v-if="localIsAuthenticated" 
                     to="/create" 
                     class="flex items-center text-lg text-gray-600 hover:text-blue-600 font-medium transition duration-200"
                 >
@@ -41,9 +41,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const isAuthenticated = computed(() => authStore.isAuthenticated);
+const localIsAuthenticated = ref(authStore.isAuthenticated);
+
+onMounted(async () => {
+  if (!authStore.isAuthenticated && authStore.accessToken) {
+    const refreshed = await authStore.refreshToken();
+    localIsAuthenticated.value = authStore.isAuthenticated;
+  } else {
+    localIsAuthenticated.value = authStore.isAuthenticated;
+  }
+});
 </script>

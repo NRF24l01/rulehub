@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-4 p-4">
+  <div class="flex flex-col flex-1 min-h-0 p-4">
     <MdEditor
       v-model="localMarkdown"
-      height="300px"
+      class="flex-1 min-h-0"
       language="en-US"
       @uploadImg="handleEditorImageInsert"
     />

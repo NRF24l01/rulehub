@@ -7,7 +7,9 @@
       class="border rounded px-3 py-2 border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
   </div>
-  <Editor v-model:content="content" v-model:images="images" />
+  <div class="flex flex-col h-[80vh] min-h-[300px] w-full">
+    <Editor v-model:content="content" v-model:images="images" class="flex-1 min-h-0" />
+  </div>
   <div v-if="error !== ''" class="flex justify-center mt-4">
     <div class="shadow-md rounded px-6 py-4 text-red-600 text-sm max-w-md w-full text-center border border-red-500 bg-red-100">
       {{ error }}
@@ -80,10 +82,8 @@ async function handleClick() {
       return;
     }
     error.value = res.data.id;
-    // Редирект на страницу статьи по имени и id через роутер
     router.push({ name: 'article', params: { id: res.data.id } });
   } catch (e) {
-    // axios error: e.response содержит ответ сервера
     error.value =
       e?.response?.data?.error ||
       e?.response?.data?.message ||
